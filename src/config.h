@@ -6,7 +6,7 @@
 #define MEMORY_TEXT  "memory  "
 
 /* See options in color.h file */
-#define TEXT_COLOR     GREEN
+#define TEXT_COLOR     BGREEN
 #define VARIABLE_COLOR BMAGENTA
 
 #define PRINT_HOST      1 // 0 == false, anything else is true
