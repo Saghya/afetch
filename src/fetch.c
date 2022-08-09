@@ -11,13 +11,26 @@
 #include "color.h"
 #include "config.h"
 
-typedef struct ascii_art {
+struct ascii_art {
     char *row1, *row2, *row3, *row4, *row5, *row6, *row7, *row8;
-} ascii_art;
+};
 
-typedef struct uptime {
+struct uptime {
     int day, hour, minute;
-} uptime;
+};
+
+struct memory {
+    unsigned long used, total;
+};
+
+struct stats {
+    char           hostname[HOST_NAME_MAX + 1];
+    struct utsname sys_info;
+    struct uptime  time;
+    char          *pkg_cnt;
+    char          *shell;
+    struct memory  mem;
+};
 
 char *pipe_read(const char *exec)
 {
@@ -31,9 +44,9 @@ char *pipe_read(const char *exec)
     return scanf_return == EOF ? NULL : return_val;
 }
 
-uptime get_uptime()
+struct uptime get_uptime()
 {
-    uptime          up;
+    struct uptime   up;
     struct timespec time;
 #if defined(CLOCK_BOOTTIME)
 #define CLOCK CLOCK_BOOTTIME
@@ -62,7 +75,7 @@ char *get_shell()
     return shell;
 }
 
-void get_memory_usage(unsigned long *mem_used, unsigned long *mem_total)
+void get_memory_usage(struct memory *mem)
 {
     unsigned long mem_free, mem_available, buffers, cached, shmem,
         s_reclaimable;
@@ -76,7 +89,7 @@ void get_memory_usage(unsigned long *mem_used, unsigned long *mem_total)
     fread(buf, 1024, 1, fp);
 
     ptr = strstr(buf, "MemTotal:");
-    sscanf(ptr, "MemTotal: %lu", mem_total);
+    sscanf(ptr, "MemTotal: %lu", &mem->total);
 
     ptr = strstr(ptr, "MemFree:");
     sscanf(ptr, "MemFree: %lu", &mem_free);
@@ -96,13 +109,13 @@ void get_memory_usage(unsigned long *mem_used, unsigned long *mem_total)
     ptr = strstr(ptr, "SReclaimable:");
     sscanf(ptr, "SReclaimable: %lu", &s_reclaimable);
 
-    *mem_used =
-        *mem_total + shmem - mem_free - buffers - cached - s_reclaimable;
+    mem->used =
+        mem->total + shmem - mem_free - buffers - cached - s_reclaimable;
 
     fclose(fp);
 }
 
-void print_logo(ascii_art ascii)
+void print_logo(struct ascii_art ascii)
 {
     printf("%s\n", ascii.row1);
     printf("%s\n", ascii.row2);
@@ -111,18 +124,17 @@ void print_logo(ascii_art ascii)
     printf("%s\n", ascii.row5);
     printf("%s\n", ascii.row6);
     printf("%s\n", ascii.row7);
-    printf("%s", ascii.row8);
+    printf("%s",   ascii.row8);
 }
 
-void print_stats(char *host, struct utsname sys_info, struct uptime time,
-                 char *pkg_cnt, char *shell, unsigned long mem_used,
-                 unsigned long mem_total)
+void print_stats(struct stats *s)
 {
     int row = 7, shift = 0;
     printf("\033[%dA", row);
 
     if (PRINT_HOST) {
-        shift = printf(BYELLOW "%s" BRED "@" BBLUE "%s", getlogin(), host);
+        shift =
+            printf(BYELLOW "%s" BRED "@" BBLUE "%s", getlogin(), s->hostname);
         shift -= sizeof(BYELLOW BRED BBLUE) - 1;
         printf("\033[%dD\033[1B", shift);
         row--;
@@ -137,7 +149,7 @@ void print_stats(char *host, struct utsname sys_info, struct uptime time,
 
     if (PRINT_KERNEL) {
         shift = printf(VARIABLE_COLOR KERNEL_TEXT TEXT_COLOR "%s",
-                       sys_info.release);
+                       s->sys_info.release);
         shift -= sizeof(VARIABLE_COLOR TEXT_COLOR) - 1;
         printf("\033[%dD\033[1B", shift);
         row--;
@@ -146,24 +158,24 @@ void print_stats(char *host, struct utsname sys_info, struct uptime time,
     if (PRINT_UPTIME) {
         shift = printf(VARIABLE_COLOR UPTIME_TEXT TEXT_COLOR);
         shift -= sizeof(VARIABLE_COLOR TEXT_COLOR) - 1;
-        if (time.day)
-            shift += printf("%dd ", time.day);
-        if (time.hour)
-            shift += printf("%dh ", time.hour);
-        shift += printf("%dm ", time.minute);
+        if (s->time.day)
+            shift += printf("%dd ", s->time.day);
+        if (s->time.hour)
+            shift += printf("%dh ", s->time.hour);
+        shift += printf("%dm ", s->time.minute);
         printf("\033[%dD\033[1B", shift);
         row--;
     }
 
     if (PRINT_PKGS) {
-        shift = printf(VARIABLE_COLOR PACKAGE_TEXT TEXT_COLOR "%s", pkg_cnt);
+        shift = printf(VARIABLE_COLOR PACKAGE_TEXT TEXT_COLOR "%s", s->pkg_cnt);
         shift -= sizeof(VARIABLE_COLOR TEXT_COLOR) - 1;
         printf("\033[%dD\033[1B", shift);
         row--;
     }
 
     if (PRINT_SHELL) {
-        shift = printf(VARIABLE_COLOR SHELL_TEXT TEXT_COLOR "%s", shell);
+        shift = printf(VARIABLE_COLOR SHELL_TEXT TEXT_COLOR "%s", s->shell);
         shift -= sizeof(VARIABLE_COLOR TEXT_COLOR) - 1;
         printf("\033[%dD\033[1B", shift);
         row--;
@@ -172,8 +184,9 @@ void print_stats(char *host, struct utsname sys_info, struct uptime time,
     if (PRINT_MEMORY) {
         shift = printf(VARIABLE_COLOR MEMORY_TEXT TEXT_COLOR);
         shift -= sizeof(VARIABLE_COLOR TEXT_COLOR) - 1;
-        shift += printf("%lu/%lu MB (%d%%)", mem_used / 1024, mem_total / 1024,
-                        (int)(mem_used / (double)mem_total * 100));
+        shift +=
+            printf("%lu/%lu MB (%d%%)", s->mem.used / 1024, s->mem.total / 1024,
+                   (int)(s->mem.used / (double)s->mem.total * 100));
         printf("\033[%dD\033[1B", shift);
         row--;
     }
@@ -193,23 +206,20 @@ void print_stats(char *host, struct utsname sys_info, struct uptime time,
 
 int main()
 {
+    struct stats     s;
     struct ascii_art logo = {ASCII_ART};
-    struct utsname   sys_info;
-    struct uptime    time;
-    char             hostname[HOST_NAME_MAX + 1], *pkg_cnt, *shell;
-    unsigned long    mem_used, mem_total;
 
-    gethostname(hostname, HOST_NAME_MAX + 1);
-    uname(&sys_info);
-    time    = get_uptime();
-    pkg_cnt = pipe_read(GET_PKG_CNT);
-    shell   = get_shell();
-    get_memory_usage(&mem_used, &mem_total);
+    gethostname(s.hostname, HOST_NAME_MAX + 1);
+    uname(&s.sys_info);
+    s.time    = get_uptime();
+    s.pkg_cnt = pipe_read(GET_PKG_CNT);
+    s.shell   = get_shell();
+    get_memory_usage(&s.mem);
 
     print_logo(logo);
-    print_stats(hostname, sys_info, time, pkg_cnt, shell, mem_used, mem_total);
+    print_stats(&s);
 
-    free(pkg_cnt);
+    free(s.pkg_cnt);
     return 0;
 }
 
