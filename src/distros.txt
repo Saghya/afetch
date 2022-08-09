@@ -46,7 +46,7 @@ Artix Linux:
     .row5 = BCYAN "   /      ,`\\     ",  \
     .row6 = BCYAN "  /   ,.'`.  \\    ",  \
     .row7 = BCYAN " /.,'`     `'.\\   ",  \
-    .row8 = BCYAN "               "
+    .row8 = BCYAN "                  "
 
 CelOS:
     .row1 = BMAGENTA "      ______        ",                                   \
@@ -298,5 +298,4 @@ OpenBSD:
     .row6 = BYELLOW " / \\         /    ",                     \
     .row7 = BYELLOW "    /-_____-\\     ",                     \
     .row8 = BYELLOW "                  "
-
 
