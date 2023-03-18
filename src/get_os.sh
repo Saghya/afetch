@@ -274,7 +274,8 @@ main() {
     get_os
     get_pkgs
 
-    sed -i "s\\.*#define DISTRO.*\\#define DISTRO \"$DISTRO\"\\" src/config.h
+    DISTRO=$(echo "${DISTRO}" | sed -e "s#/#\\\/#g")
+    sed -i "s/.*#define DISTRO.*/#define DISTRO \"$DISTRO\"/" src/config.h
     sed -i "s/.*#define GET_PKG_CNT.*/#define GET_PKG_CNT \"$PACKAGES | wc -l\"/" src/config.h
     if grep -q "${DISTRO%% [0-9]*}" src/distros.txt; then
         sed -i -e '/#define ASCII_ART/,+8d' src/config.h
