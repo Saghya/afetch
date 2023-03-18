@@ -268,7 +268,6 @@ Android:
     .row7 = BGREEN "                      ",  \
     .row8 = BGREEN "                      "
 
-
 Darwin:
     .row1 = BGREEN   "          .:'      ", \
     .row2 = BGREEN   "      __ :'__      ", \
@@ -299,3 +298,12 @@ OpenBSD:
     .row7 = BYELLOW "    /-_____-\\     ",                     \
     .row8 = BYELLOW "                  "
 
+Raspbian GNU/Linux:
+    .row1 = BGREEN "   __  __     ",  \
+    .row2 = BGREEN "  (_\\)(/_)    ", \
+    .row3 = BRED   "  (_(__)_)    ",  \
+    .row4 = BRED   " (_(_)(_)_)   ",  \
+    .row5 = BRED   "  (_(__)_)    ",  \
+    .row6 = BRED   "    (__)      ",  \
+    .row7 =        "              ",  \
+    .row8 =        "              "
